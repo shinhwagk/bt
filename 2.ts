@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, lchmod } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 
 // byte ":" = 58; "i" = 105;
 
@@ -8,9 +8,17 @@ const colonChar = ":".charCodeAt(0);
 const dChar = "d".charCodeAt(0);
 const lChar = "l".charCodeAt(0);
 
-const fileContent: Buffer = Buffer.from(readFileSync("./test3.torrent", { encoding: "utf-8" }))
-const maxLength = fileContent.length
+const fileContent = readFileSync("./test3.torrent", { encoding: "utf-8" })
+const buffers: Buffer = Buffer.from(fileContent)
+const maxLength = buffers.length
+console.info("length", maxLength, fileContent.length)
 let pos = 0;
+
+enum SetStack {
+    D, LL, L
+}
+
+const setStack: SetStack[] = []
 
 // const buffers = Buffer.from(fileContent, "utf-8").entries()
 
@@ -95,13 +103,13 @@ function judge_number(buffer) {
 }
 
 function next_buffer(): number {
-    const buffer = fileContent[pos]
+    const buffer = buffers[pos]
     reset_pos(1)
     return buffer
 }
 
 function view_buffer(offet: number = 0) {
-    return fileContent[pos + offet]
+    return buffers[pos + offet]
 }
 
 function reset_pos(offset: number): void {
@@ -110,32 +118,56 @@ function reset_pos(offset: number): void {
 
 function get_val() {
     const v_buffer = next_buffer()
-    console.info("abc",v_buffer)
+    console.info("abc", v_buffer)
     switch (true) {
         case 0x30 <= v_buffer && v_buffer <= 0x39:
             reset_pos(-1)
             return get_str()
         case v_buffer === dChar:
+            setStack.push(SetStack.D)
             return get_dict()
         case v_buffer === iChar:
             return get_num()
         case v_buffer === lChar && view_buffer() === lChar:
-            console.info("lll")
-            reset_pos(1)
-        case v_buffer === lChar:
-            console.info("l",pos,Buffer.from([view_buffer(1)]).toString())
+            reset_pos(1); setStack.push(SetStack.LL)
             return get_list()
-        case v_buffer === eChar && view_buffer() === lChar:
+        case v_buffer === lChar:
+            setStack.push(SetStack.L)
+            return get_list()
+        case v_buffer === eChar && view_buffer() === lChar && setStack.slice(-1)[0] === SetStack.LL:
             console.info(pos, "el")
             reset_pos(1)
             return get_val()
-        case v_buffer === eChar && view_buffer() === eChar:
-            console.info(pos, "ee")
+        case v_buffer === eChar && setStack.slice(-1)[0] === SetStack.L:
+            console.info(pos, "l end")
+            setStack.pop()
+            return 0
+        case v_buffer === eChar && view_buffer() === eChar && setStack.slice(-1)[0] === SetStack.LL:
+            console.info(pos, "ll end")
+            setStack.pop()
             reset_pos(1)
             return 0
-        case v_buffer === eChar:
+        case v_buffer === eChar && setStack.slice(-1)[0] === SetStack.D:
+            setStack.pop()
             return 0
     }
 }
 
-console.info(get_val()["info"]["files"])
+const paser_content = JSON.stringify(get_val())
+// console.info(paser_content)
+
+// for(let f of fileContent){
+// let a = 0
+// for (let f of buffers) {
+//     if (f > 177) {
+//         a += 1
+//         console.info(f)
+//     }
+// }
+console.info(paser_content)
+// }
+// writeFileSync("filecontent.txt", fileContent.toString(), { encoding: "utf-8" })
+writeFileSync("result.json", paser_content, { encoding: "utf-8" })
+
+
+const b = Buffer.from([1,2,3]   ).toString()
