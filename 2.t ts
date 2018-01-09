@@ -1,0 +1,134 @@
+import { readFileSync, writeFileSync } from "fs";
+
+// byte ":" = 58; "i" = 105;
+
+const eChar = "e";
+const iChar = "i";
+const colonChar = ":";
+const dChar = "d";
+const lChar = "l";
+
+const fileContent: Buffer = Buffer.from(readFileSync("./test4.torrent", { encoding: "utf-8" }))
+const maxLength = fileContent.length
+let pos = 0;
+
+// const buffers = Buffer.from(fileContent, "utf-8").entries()
+
+function test(dict) {
+    writeFileSync("test.json", JSON.stringify(dict))
+}
+
+function get_dict() {
+    const dict = {}
+    while (true) {
+        const len: number = get_length()
+        if (!len) {
+            break
+        }
+        const key = get_str(len)
+        const val = get_val()
+        dict[key] = val
+        console.info(dict)
+        test(dict)
+    }
+    return dict
+}
+
+function get_str(str_len) {
+    let chars: string;
+    while (str_len) {
+        const char = gb()
+        console.info(char)
+        chars = chars ? chars + char : char
+        str_len -= 1
+    }
+    console.info(chars)
+    return chars
+}
+
+function get_num(): number {
+    let chars: string = "";
+    let str: string = ""
+    while ((str = gb()) !== eChar) {
+        chars += str
+    }
+    return Number(chars)
+}
+
+function get_list(char?: string) {
+    const list = []
+    while (true) {
+        const val = get_val(char)
+        if (val) {
+            list.push(val)
+        } else {
+            break
+        }
+    }
+    return list
+}
+
+function get_length(str: string = ""): number {
+    let chars: string = str;
+    let char: string;
+    while ((char = gb()) !== colonChar) {
+        chars += char
+    }
+
+    return Number(chars)
+}
+
+function gb() {
+    const char = fileContent[pos]
+    pos += 1
+    return char
+}
+
+function next() {
+    pos += 1
+    return fileContent[pos + 1]
+}
+
+function get_val(val?: string) {
+    const char = val ? val : gb()
+
+    if (["1", "2", "3", "4", "5", "6", "7", "8", "9"].indexOf(char) >= 0) {
+        const len = get_length(char)
+        console.info(len, "lengt")
+        return get_str(len)
+    } else if (char === dChar) {
+        return get_dict()
+    } else if (char === iChar) {
+        return get_num()
+    } else if (char === lChar) {
+        const testChar = gb()
+        if (testChar === lChar) {
+            return get_list()
+        } else {
+            return get_val(testChar)
+        }
+    } else if (char === eChar) {
+        const testChar = gb()
+        if (testChar === lChar) {
+            return get_val()
+        } else if (testChar === eChar) {
+            return 0
+        } else {
+            return get_val(testChar)
+        }
+    }
+}
+
+console.info(get_val())
+
+function abc(a: number) {
+
+}
+// const torrentFile = {
+//     "announce": "",
+//     "announce-list": [],
+//     "comment": "",
+//     "created by": "",
+//     "creation date": ""
+// }
+// ""
